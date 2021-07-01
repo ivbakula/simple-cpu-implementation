@@ -60,6 +60,10 @@ union encoded_instr {
 #define FORMAT_PREFIX_RM	0x2		/* format register-memory */
 #define FORMAT_PREFIX_I		0x3		/* format register-immidiate */
 
-typedef enum { NOP, AND, OR, XOR, MOV, ADD, SUB, JT, JMP, EQ, GE, LE, GT, LT, HLT, OUTW } opcodes;
+typedef enum { NOP, AND, OR, XOR, 
+	       MOV, ADD, SUB, 
+	       OUTB, OUTL, INB, INL, 
+	       JLT, JGT, JLE, JGE, JE, JMP, HLT, CMP } opcodes;
 
+typedef enum { NOT=30, INC, DEC } to_be_implemented;
 #endif

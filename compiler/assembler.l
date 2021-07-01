@@ -12,7 +12,7 @@ int yyline = 1;
 
 %}
 
-DEC [1-9]+[0-9]*
+DEC [0-9]+[0-9]*
 HEX 0x[0-9A-Fa-f]+
 BIN 0b[0-1]+
 %%
@@ -42,28 +42,31 @@ BIN 0b[0-1]+
 "rsp"|"RSP" { yylval = 0xe; return REGISTER; }
 "rbp"|"RBP" { yylval = 0xf; return REGISTER; }
 
-"nop"|"NOP" { yylval = 0x0; return NOP; }
-"and"|"AND" { yylval = 0x1; return OPCODE; }
-"or"|"OR"   { yylval = 0x2; return OPCODE; }
-"xor"|"XOR" { yylval = 0x3; return OPCODE; }
+"nop"|"NOP" { yylval = 0x0; return OPCODE_SINGLE; }
+"and"|"AND" { yylval = 0x1; return OPCODE_BINARY; }
+"or"|"OR"   { yylval = 0x2; return OPCODE_BINARY; }
+"xor"|"XOR" { yylval = 0x3; return OPCODE_BINARY; }
 
-"mov"|"MOV" { yylval = 0x4; return OPCODE; }
-"add"|"ADD" { yylval = 0x5; return OPCODE; }
-"sub"|"SUB" { yylval = 0x6; return OPCODE; }
+"mov"|"MOV" { yylval = 0x4; return OPCODE_BINARY; }
+"add"|"ADD" { yylval = 0x5; return OPCODE_BINARY; }
+"sub"|"SUB" { yylval = 0x6; return OPCODE_BINARY; }
 
-"jt" | "JT" { yylval = 0x7; return OPCODE; }
-"jmp"|"JMP" { yylval = 0x8; return OPCODE; }
+"outb"|"OUTB" { yylval = 0x7; return OPCODE_UNARY; }
+"outl"|"OUTL" { yylval = 0x8; return OPCODE_UNARY; }
 
-"eq" | "EQ" { yylval = 0x9; return OPCODE; }
+"inb" | "INB" { yylval = 0x9; return OPCODE_UNARY; }
+"inl"|"INL" { yylval = 0xa; return OPCODE_UNARY; }
 
-"ge" | "GE" { yylval = 0xa; return OPCODE; }
-"le" | "LE" { yylval = 0xb; return OPCODE; }
+"jlt"|"JLT" { yylval = 0xb; return OPCODE_UNARY; }
+"jgt"|"JGT" { yylval = 0xc; return OPCODE_UNARY; }
+"jle"|"JLE" { yylval = 0xd; return OPCODE_UNARY; }
+"jge"|"JGE" { yylval = 0xe; return OPCODE_UNARY; }
 
-"gt" | "GT" { yylval = 0xc; return OPCODE; }
-"lt" | "LT" { yylval = 0xd; return OPCODE; }
+"je"|"JE" { yylval = 0xf; return OPCODE_UNARY; }
+"jmp"|"JMP" { yylval = 0x10; return OPCODE_UNARY; }
 
-"hlt"|"HLT" { yylval = 0xe; return HALT; }
-"outw"|"OUTW" { yylval = 0xf; return OUTW; }
+"hlt"|"HLT"  { yylval = 0x11; return OPCODE_SINGLE; }
+"cmp"|"CMP"  { yylval = 0x12; return OPCODE_BINARY; }
 
 . { invalid_token(yytext[0]); }
 

@@ -38,7 +38,10 @@ void debug_instruction();
 
 %token CONST
 %token REGISTER
-%token OPCODE
+
+%token OPCODE_BINARY
+%token OPCODE_UNARY		 
+%token OPCODE_SINGLE		/* halt, nop */
 %token HALT
 %token NOP
 %token OUTW
@@ -50,24 +53,30 @@ program:
 			text[current++] = instr.data;
 			pfix.data = 0; instr.data = 0;
 		    }
+       | program unary {
+			 instr.f.prefix = pfix.data;
+			 text[current++] = instr.data;
+			 pfix.data = 0; instr.data = 0;
+		       }
        | program single { 
 				instr.f.prefix = 0;  
 				text[current++] = instr.data; 
-				pfix.data = 0; 
-				instr.data = 0; 
+				pfix.data = 0; instr.data = 0; 
 			}
        |
        ;
 
-single:
-    HALT { instr.f.opcode = $1; }
-    | OUTW { instr.f.opcode = $1; }
-    | NOP { instr.f.opcode = $1; }
+binary:
+    OPCODE_BINARY src ',' dst { instr.f.opcode = $1; }
     ;
 
-binary:
-    OPCODE src ',' dst { instr.f.opcode = $1; }
-    ;
+unary:
+     OPCODE_UNARY src { instr.f.opcode = $1; }
+     ;
+	
+single:
+      OPCODE_SINGLE { instr.f.opcode = $1; }
+      ;
 
 src:
    REGISTER     { pfix.p.src  = 0; instr.f.rs  = $1; }
@@ -114,9 +123,6 @@ int main(int argc, char *argv[])
 {
 	yyin = fopen(argv[1], "r");
 	yyparse();
-
-	for (int i = 0; i < current; i++) 
-		printf("%x\n", text[i]);
 
 	FILE *out = fopen("raw.out", "wb");
 	fwrite(text, current , sizeof(unsigned int), out);
