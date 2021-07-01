@@ -10,20 +10,24 @@ void comment();
 int bin2int(char*, int *);
 int yyline = 1;
 
+char yyname[256];
+
 %}
 
 DEC [0-9]+[0-9]*
 HEX 0x[0-9A-Fa-f]+
 BIN 0b[0-1]+
+NAME \.[0-9A-Za-z]+
 %%
 [\t\n ] ;
 "/*" { comment(); }
 
-[&$,] return *yytext;
+[&$,:] return *yytext;
 
 {HEX} { yylval = (int)strtol(yytext, NULL, 0); return CONST; }
 {BIN} { bin2int(yytext, &yylval); return CONST; }
 {DEC} { yylval = atoi(yytext); return CONST; }
+{NAME} { strncpy(yyname, yytext, 256); return LABEL; }
 
 "r0"|"R0"   { yylval = 0x0; return REGISTER; }
 "r1"|"R1"   { yylval = 0x1; return REGISTER; }

@@ -1,8 +1,17 @@
 %{
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+
+#include "hashtable.h"
+
 int yylex(void);
+void yyerror(char *);
+
 extern int yyline; 
 extern FILE *yyin;
+extern char yyname[256];
 
 struct instruction_fields {
 	unsigned int imm : 16;
@@ -17,6 +26,12 @@ union encode_instruction {
 	struct instruction_fields f;
 };
 
+struct label_fields {
+	unsigned int prefix : 8;
+	unsigned int value : 16;
+	unsigned int suffix : 8;
+};
+
 struct prefix {
 	unsigned char dst;
 	unsigned char src;
@@ -27,16 +42,23 @@ union encode_prefix {
 	struct prefix p;
 };
 
+void debug_instruction();
+void insert_new_label();
+void derefer_label(unsigned short *);
+
+struct hash_table *names;
+
 unsigned int text[256] = {0};
 int current = 0;
 union encode_instruction instr;
 union encode_prefix pfix;
 
-void debug_instruction();
 
 %}
 
 %token CONST
+%token LABEL
+
 %token REGISTER
 
 %token OPCODE_BINARY
@@ -56,6 +78,7 @@ program:
        | program unary {
 			 instr.f.prefix = pfix.data;
 			 text[current++] = instr.data;
+			 debug_instruction();
 			 pfix.data = 0; instr.data = 0;
 		       }
        | program single { 
@@ -63,8 +86,10 @@ program:
 				text[current++] = instr.data; 
 				pfix.data = 0; instr.data = 0; 
 			}
+       | program LABEL ':'  { insert_new_label(); pfix.data = 0; }
        |
        ;
+
 
 binary:
     OPCODE_BINARY src ',' dst { instr.f.opcode = $1; }
@@ -72,6 +97,13 @@ binary:
 
 unary:
      OPCODE_UNARY src { instr.f.opcode = $1; }
+     | OPCODE_UNARY LABEL {
+				instr.f.opcode = $1; 
+				pfix.data = 3;
+				unsigned short val = 0;
+				derefer_label(&val); 
+				instr.f.imm = val;
+			   }
      ;
 	
 single:
@@ -119,11 +151,41 @@ void debug_instruction()
 	printf("%x\n", instr.data);
 }
 
+void derefer_label(unsigned short *dst)
+{
+	unsigned long label = ht_get(names, yyname);
+	if (label < 0) {
+		char err[256];
+		sprintf(err, "Error! Label %s not defined.", yyname);
+		yyerror(err);
+		exit(-1);
+	}
+	
+	if (label < USHRT_MAX) {
+		printf("%d\n", label);
+		*dst = (unsigned short) label;
+	}
+}
+
+void insert_new_label()
+{
+	int retval = ht_insert(names, yyname, current);
+	if (retval < 0) {
+		char err[256];
+		sprintf(err, "Error! Label %s already defined on the line: %d\n",
+				names, ht_get(names, yyname));
+		yyerror(err);
+		exit(-1);
+	}
+	memset(yyname, '\0', 256);
+}
+
 int main(int argc, char *argv[])
 {
 	yyin = fopen(argv[1], "r");
+	names = ht_create(999);
 	yyparse();
-
+	
 	FILE *out = fopen("raw.out", "wb");
 	fwrite(text, current , sizeof(unsigned int), out);
 	fclose(yyin);
