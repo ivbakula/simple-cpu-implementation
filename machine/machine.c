@@ -245,7 +245,7 @@ int load_program(struct Machine *m, char *progpath)
 	int size = 0;
 	FILE *fp = fopen(progpath, "rb");
 	if (!fp) {
-		fprintf(stderr, "Error! Program \"%s\"doesn't exist!", progpath);
+		fprintf(stderr, "Error! File \"%s\" doesn't exist!", progpath);
 		return -1;
 	}
 	size = fread(m->memory, sizeof(*m->memory), ARRAY_SIZE(m->memory), fp);

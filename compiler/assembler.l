@@ -19,10 +19,11 @@ HEX 0x[0-9A-Fa-f]+
 BIN 0b[0-1]+
 NAME \.[0-9A-Za-z]+
 %%
-[\t\n ] ;
+[\t ] ;
+\n { yyline++; }
 "/*" { comment(); }
 
-[&$,:] return *yytext;
+[&$,:()] return *yytext;
 
 {HEX} { yylval = (int)strtol(yytext, NULL, 0); return CONST; }
 {BIN} { bin2int(yytext, &yylval); return CONST; }
