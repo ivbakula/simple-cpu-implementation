@@ -1,16 +1,18 @@
-`define LDW 6'b000000   // load value from memory to register
-`define STW 6'b000001   // store value from register to memory
+`define NOP 6'b000000
+`define LDW 6'b000001   // load value from memory to register
+`define STW 6'b000010   // store value from register to memory
 
-`define MV 6'b000010   // move value accross registers (source operand might be immidiate value) 
+`define MV 6'b000011   // move value accross registers (source operand might be immidiate value) 
 
-`define ADD 6'b000011
-`define SUB 6'b000100
-`define SHR 6'b000101
-`define SHL 6'b000110
-`define AND 6'b000111
-`define OR  6'b001000
-`define XOR 6'b001001
-`define HLT 6'b111111
+`define ADD 6'b000100
+`define SUB 6'b000101
+`define SHR 6'b000110
+`define SHL 6'b000111
+`define AND 6'b001000
+`define OR  6'b001001
+`define XOR 6'b001010
+`define HLT 6'b001011
+`define OUTW 6'b001101
 
 `define FORMAT_PREFIX_R 2'b00
 `define FORMAT_PREFIX_MR 2'b01

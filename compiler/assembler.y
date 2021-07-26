@@ -6,7 +6,7 @@
 #include <stdbool.h>
 
 #include "hashtable.h"
-
+//#define DEBUG_INSTRUCTION
 int yylex(void);
 void yyerror(char *);
 
@@ -15,7 +15,7 @@ extern FILE *yyin;
 extern char yyname[256];
 
 struct instruction_fields {
-	unsigned int imm : 16;
+	int imm : 16;
 	unsigned int rd : 4;
 	unsigned int rs : 4;
 	unsigned int opcode : 6;
@@ -67,68 +67,102 @@ union encode_prefix pfix;
 %token LABEL
 
 %token REGISTER
-
-%token OPCODE_BINARY
-%token OPCODE_UNARY		 
-%token OPCODE_SINGLE		/* halt, nop */
-%token HALT
-%token NOP
-%token OUTW
+%token OPCODE_NOP
+%token OPCODE_MEM_RD
+%token OPCODE_MEM_WR
+%token OPCODE_ALU
+%token OPCODE_HLT
+%token OPCODE_IO
 
 %%
 program: 
-       program binary { generate_instruction(); }
-       | program unary { generate_instruction(); }
-       | program single { generate_instruction(); }
+       program alu{ generate_instruction(); }
+       | program mem_rd { generate_instruction(); }
+       | program mem_wr { generate_instruction(); }
+       | program io { generate_instruction(); }
+       | program halt { generate_instruction(); }
+       | program nop { generate_instruction(); }
        | program LABEL ':'  { insert_new_label(); }
        |
        ;
 
 
-binary:
-    OPCODE_BINARY src ',' dst { instr.f.opcode = $1; }
-    ;
+halt:
+    OPCODE_HLT 
+	{ 
+		instr.f.opcode = $1; 
+	}
+	;
+nop:
+   OPCODE_NOP
+	{
+		pfix.data = 0;
+	}
+	;
+/* io instructions are just just for emulator. DO NOT USE THEM ON HARDWARE (not * implemented) */
+io:
+  OPCODE_IO '%'src_reg
+	{
+		pfix.data = 0;
+		instr.f.opcode = $1;
+	}
+	;
+alu:
+   OPCODE_ALU '%'src_reg',' '%'dst_reg
+	{ 
+		pfix.data = 0;
+		instr.f.opcode = $1; 
+	}
+   | OPCODE_ALU '$'imm ',' '%'dst_reg
+	{
+		pfix.data = 3;
+		instr.f.opcode = $1;
+	}
+   | OPCODE_ALU '$'LABEL ',' '%'dst_reg
+	{
+		pfix.data = 0;
+		instr.f.opcode = $1;
+		is_labeled = true;
+	}
+   ;
 
-unary:
-     OPCODE_UNARY src { instr.f.opcode = $1; }
-     | OPCODE_UNARY LABEL { instr.f.opcode = $1; pfix.data = 3; is_labeled = true; }
-     ;
-	
-single:
-      OPCODE_SINGLE { instr.f.opcode = $1; }
+mem_rd:
+      OPCODE_MEM_RD '('LABEL')'',' '%'dst_reg
+	{
+		pfix.data = 2;
+		instr.f.opcode = $1;
+	}
+      | OPCODE_MEM_RD '('imm')' ',' '%'dst_reg
+	{
+		pfix.data = 2;
+		instr.f.opcode = $1;
+	}
       ;
 
-src:
-   REGISTER     { pfix.p.src  = 0; instr.f.rs  = $1; }
-   | '$' CONST	{ pfix.data = 3; instr.f.imm = $2; }   /* constant integer */
-//   | '&' CONST  { pfix.p.src  = 1; instr.f.imm = $2; } /* memory address */
-   | '&' '('LABEL')' { pfix.p.src = 1; is_labeled = true; }
+mem_wr:
+      OPCODE_MEM_WR '%'src_reg ',' '('LABEL')'
+	{
+		pfix.data = 1;
+		instr.f.opcode = $2;
+		is_labeled = true;
+	}
+      | OPCODE_MEM_WR '%'src_reg',' '('imm')'
+        {
+		pfix.data = 1;
+		instr.f.opcode = $1;
+	}
+      ;
+
+imm:
+   CONST {instr.f.imm = $1; }
    ;
-
-dst:
-   REGISTER     { 
-			instr.f.rd = $1;
-			if (pfix.data != 3)
-				pfix.p.dst = 0;
-		}
-
-   | '&' '(' LABEL ')' { 
-			if (pfix.data == 3) {
-				char err[256] = "\0"; 
-				sprintf(err, 
-					"Syntax error! Illegal combination of "
-					"source and destination "
-					"on the line: %d\n", yyline);
-				yyerror(err);
-				return -1;
-			} else {
-				pfix.p.dst = 1;
-//				instr.f.imm = $2;
-				is_labeled = true;
-			}
-		}
-   ;
-
+   
+src_reg:
+       REGISTER { instr.f.rs = $1; }
+       ;
+dst_reg:
+       REGISTER { instr.f.rd = $1; }
+       ;
 %%
 
 void debug_instruction()
@@ -161,7 +195,9 @@ struct code *new_slot(bool has_reference, char *label)
 
 void generate_instruction()
 {
+#ifdef DEBUG_INSTRUCTION
 	debug_instruction();
+#endif
 	if (tail == NULL) {
 		gen_code = new_slot(is_labeled, yyname);
 		tail = gen_code;

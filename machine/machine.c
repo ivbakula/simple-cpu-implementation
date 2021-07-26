@@ -71,103 +71,34 @@ static void xor(struct Machine *m, DWORD *dst, DWORD src)
 	*dst ^= src;
 }
 
-static void cmp(struct Machine *m, DWORD *dst, DWORD src)
-{
-	/* reset complete status register including unused (for now) fields */
-	m->ST.data = 0;	
-	if (*dst > src) 
-	    m->ST.data = STATUS_GT;
-	else if ( *dst == src) 
-	    m->ST.data = STATUS_EQUAL;  
-	 else 
-	    m->ST.data = STATUS_LT;
-}
-
-static void outb(struct Machine *m, DWORD *src)
+static void outb(struct Machine *m, DWORD *src, DWORD x)
 {
 	putchar(*src);
 }
 
-static void inb(struct Machine *m, DWORD *dst)
+static void inw(struct Machine *m, DWORD *dst, DWORD x)
 {
-	*dst = getchar();
+	char tmp;
+	tmp = getchar();
+	*dst = atoi(&tmp);
 }
 
-static void outl(struct Machine *m, DWORD *src)
+static void outw(struct Machine *m, DWORD *dst, DWORD src)
 {
-	printf("%d\n", *src);
+	printf("%d\n", src);
 }
 
-static void inl(struct Machine *m, DWORD *dst) 
+static void shr(struct Machine *m, DWORD *dst, DWORD src)
 {
-	*dst = getchar();
+	*dst = *dst >> src; 
 }
 
-static void not(struct Machine *m, DWORD *dst)
+static void shl(struct Machine *m, DWORD *dst, DWORD  src)
 {
-	*dst = ~(*dst);
+	*dst = *dst << src;
 }
 
-static void inc(struct Machine *m, DWORD *dst)
-{
-	*dst++;
-}
-
-static void dec(struct Machine *m, DWORD *dst)
-{
-	*dst--;
-}
-static void jmp(struct Machine *m, DWORD *dst)
-{
-	m->IP = *dst;
-}
-
-static void jlt(struct Machine *m, DWORD *dst)
-{
-	if (m->ST.data == STATUS_LT) {
-		m->IP = *dst;
-	} else {
-		m->IP++;
-	}
-}
-
-static void jgt(struct Machine *m, DWORD *dst)
-{
-	if (m->ST.data == STATUS_GT) {
-		jmp(m, dst);
-	} else {
-		m->IP++;
-	}
-}
-
-static void jle(struct Machine *m, DWORD *dst)
-{
-	if (m->ST.data == STATUS_LT || m->ST.data == STATUS_EQUAL) {
-		jmp(m, dst);
-	} else {
-		m->IP++;
-	}
-}
-
-static void jge(struct Machine *m, DWORD *dst)
-{
-	if (m->ST.data == STATUS_GT || m->ST.data == STATUS_EQUAL) {
-		jmp(m, dst);
-	} else {
-		m->IP++;
-	}
-}
-
-static void je(struct Machine *m, DWORD *dst)
-{
-	if (m->ST.data == STATUS_EQUAL) {
-		jmp(m, dst);
-	} else {
-		m->IP++;
-	}
-}
-
-void do_instruction(struct Machine *m, union encoded_instr c, BINARY_OPERATOR op2, UNARY_OPERATOR op1)
+void do_instruction(struct Machine *m, union encoded_instr c, BINARY_OPERATOR op2)
 {
 	BYTE prefix = c.fields.prefix;
 	BYTE rs = c.fields.rs;
@@ -175,58 +106,36 @@ void do_instruction(struct Machine *m, union encoded_instr c, BINARY_OPERATOR op
 	WORD imm = c.fields.imm;
 	DWORD imm2 = imm;
 		
-	if (op2) {
-		switch(prefix) {
-			case FORMAT_PREFIX_R: op2(m, &m->R[rd], m->R[rs]); break;
-			case FORMAT_PREFIX_I: op2(m, &m->R[rd], imm); break; 
-			case FORMAT_PREFIX_RM: op2(m, &m->R[rd], m->memory[imm]); break;
-			case FORMAT_PREFIX_MR: op2(m, &m->memory[imm], m->R[rs]); break;
-		}
-	} else if (op1) {
-		switch(prefix) {
-			case FORMAT_PREFIX_R: op1(m, &m->R[rs]); break;
-			case FORMAT_PREFIX_I: op1(m, &imm2); break; 
-			case FORMAT_PREFIX_MR: op1(m, &m->memory[imm]); break;
-		}
-	} 
+	switch(prefix) {
+		case FORMAT_PREFIX_R: op2(m, &m->R[rd], m->R[rs]); break;
+		case FORMAT_PREFIX_I: op2(m, &m->R[rd], imm); break; 
+		case FORMAT_PREFIX_RM: op2(m, &m->R[rd], m->memory[imm]); break;
+		case FORMAT_PREFIX_MR: op2(m, &m->memory[imm], m->R[rs]); break;
+	}
 }
 
 int execute(struct Machine *m)
 {
 	int is_jmp = 0;
+	char input = '\0';
 	union encoded_instr current;
 	REGISTER ip = m->IP;
 	current.data =  m->memory[ip];
 	BYTE opcode = current.fields.opcode;
-
+	printf("instruction: 0x%x\n", current);
 	switch(opcode) {
-		/* unary operators (only on registers) */
-		case NOT: break;
-		case INC: break; 
-		case DEC: printf("not implemented yet\n"); return HALT; break;
-
-		case OUTB: do_instruction(m, current, NULL, &outb); break;
-		case OUTL: do_instruction(m, current, NULL, &outl); break;
-		case INB: do_instruction(m, current, NULL, &inb); break;
-		case INL: do_instruction(m, current, NULL, &inl); break;
-
-		/* binary operators */
-		case MOV: do_instruction(m, current, &mov, NULL); break;
-		case ADD: do_instruction(m, current, &add, NULL); break;
-		case SUB: do_instruction(m, current, &sub, NULL); break;
-		case OR: do_instruction(m, current, &or, NULL); break;
-		case AND: do_instruction(m, current, &and, NULL); break;
-		case XOR: do_instruction(m, current, &xor, NULL); break;
-		case CMP: do_instruction(m, current, &cmp, NULL); break;
-
-		/* jumps */
-		case JMP: do_instruction(m, current, NULL, &jmp); is_jmp = 1; break;
-		case JLT: do_instruction(m, current, NULL, &jlt); is_jmp = 1; break;
-		case JGT: do_instruction(m, current, NULL, &jgt); is_jmp = 1; break;
-		case JLE: do_instruction(m, current, NULL, &jle); is_jmp = 1; break;
-		case JGE: do_instruction(m, current, NULL, &jge); is_jmp = 1; break;
-		case JE: do_instruction(m, current,  NULL, &je);  is_jmp = 1; break;
-
+		case LDW: do_instruction(m, current, mov); break;
+		case STW: do_instruction(m, current, mov); break;
+		case MV:  do_instruction(m, current, mov); break;
+		case ADD: do_instruction(m, current, add); break;
+		case SUB: do_instruction(m, current, sub); break;
+		case SHR: do_instruction(m, current, shr); break;
+		case SHL: do_instruction(m, current, shl); break;
+		case AND: do_instruction(m, current, and); break;
+		case OR: do_instruction(m, current, or); break;
+		case XOR: do_instruction(m, current, xor); break;
+		case INW: do_instruction(m, current, inw); break;
+		case OUTW: do_instruction(m, current, outw); break;
 		/* single opcodes */
 		case HLT: return HALT; break;
 		case NOP: break;

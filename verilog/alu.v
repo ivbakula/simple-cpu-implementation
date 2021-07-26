@@ -13,6 +13,7 @@ module alu (
     
     always @ (posedge rst) begin rdy = 0; end
     always @ (negedge enable) begin rdy = 0; end
+
     always @ (posedge enable)
     begin
 	if (enable == 1) begin
@@ -24,7 +25,14 @@ module alu (
 		`AND: begin y <= x1 & x2;  rdy <= 1; end
 		`OR:  begin y <= x1 | x2;  rdy <= 1; end
 		`XOR: begin y <= x1 ^ x2;  rdy <= 1; end
-		`MV:  begin y <= imm; rdy <= 1; end
+		`MV:  begin 
+		      if (imm[15] == 1) y <= {16'd65535, imm}; // sign extension
+		      else y <= imm;
+		      rdy <= 1; 
+		 end
+		`NOP: begin rdy <= 1; end
+		`HLT: begin rdy <= 1; end
+		`OUTW: begin y <= x2; rdy <= 1; end
 	    endcase
 	end
     end

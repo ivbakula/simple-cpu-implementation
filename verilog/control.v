@@ -17,7 +17,7 @@ module control (
     // alu signals
     reg [31:0] x1;        // first operand 
     reg [31:0] x2;        // second operand
-    wire [31:0] y;        // result 
+    wire signed [31:0] y;        // result 
     reg alu_enable;
     wire alu_rdy;
 
@@ -105,18 +105,22 @@ module control (
 
     always @ (posedge alu_rdy)
     begin
-	if (opcode != 6'b111111) begin
-	    regs[rd] = y; 
-	    alu_enable = 0;
-            pc_control = 2;
+	if (opcode == `OUTW) begin
+	    $strobe(y);
+        end else if (opcode != `HLT) begin
+	    if (opcode != `NOP) begin
+	        regs[rd] = y; 
+	        alu_enable = 0;
+                pc_control = 2;
+	    end
 	end
     end
     
     alu a (
 	.func(opcode),
 	.enable(alu_enable),
-	.x1(regs[rs]),
-	.x2(regs[rd]),
+	.x2(regs[rs]),
+	.x1(regs[rd]),
 	.imm(imm),
 	.y(y),
 	.rdy(alu_rdy)
