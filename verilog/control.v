@@ -4,137 +4,97 @@ module control (
     input enable
     );
 
-    integer i;
-    reg [31:0]cntr;
-    reg [31:0] regs[15:0]; // 16 GP registers
+    wire [5:0]state;
 
-    // program counter
-    reg [31:0] instr;
-    reg [31:0] pc;        // instruction pointer 
-    reg [1:0] pc_control; // msb - increment pc and fetch new; lsb just fetch_new
+    // program counter 
+    wire [31:0] pc;
+    wire [31:0] instr;
 
-    
-    // alu signals
-    reg [31:0] x1;        // first operand 
-    reg [31:0] x2;        // second operand
-    wire signed [31:0] y;        // result 
-    reg alu_enable;
-    wire alu_rdy;
-
-    // memory signals
-    reg r_enable;    // read enable (RAM)
-    reg w_enable;    // write enable (RAM)
-    reg [31:0]address_bus;
-    reg [31:0]word_in;     // write word to memory
-    wire [31:0]word_out;    // word read from memory
+    // memory module
+    wire [31:0] address_bus;
+    wire [31:0] data_r;
+    wire [31:0] data_w;
     wire mem_rdy;
 
     // instruction fields
-    wire [1:0] pfix = instr[31:30];
-    wire [5:0] opcode = instr[29:24];
-    wire [3:0] rs = instr[23:20];
-    wire [3:0] rd = instr[19:16];
-    wire [15:0] imm = instr[15:0];
+    wire halt;
+    wire [1:0] pfix;
+    wire [5:0] opcode;
+    wire [3:0] rs;
+    wire [3:0] rd;
+    wire [15:0] imm;
 
-    always @ (posedge rst)
-    begin
-      for (i = 0; i < 16; i = i + 1) begin
-           regs[i] = 0;
-      end
-      cntr = 0;
-      pc = 0;
-      pc_control = 1;
-    end
+    // alu operands
+    wire [31:0] x1;
+    wire [31:0] x2;
+    wire [31:0] y;
 
-    always @ (posedge mem_rdy)
-    begin
-	if (enable == 1) begin
-	    if (pc_control != 0) begin 
-		instr <= word_out; 
-		r_enable <= 0; 
-	    end else begin
-	        if (r_enable == 1) begin
-		    regs[rd] <= word_out;
-		    r_enable <= 0;
-	        end else w_enable <= 0;
-                pc_control <= 2;    
-	    end
-	end
-    end
-
-    always @ (posedge clk)
-    begin
-	if ((enable & mem_rdy) == 1) begin
-	    case (pc_control)
-	        2'b01: begin
-		     address_bus = pc;
-		     r_enable = 1;
-	        end
-	        2'b10: begin
-		     pc = pc + 1;
-		     address_bus = pc;
-		     r_enable = 1;
-	        end
-	    endcase
-        end
-    end
-
-    always @ (instr)
-    begin
-	if (enable == 1) begin
-             pc_control = 0;
-	     case (pfix)
-		 2'b00: begin 
-		      alu_enable <= 1; 
-		 end
-		 2'b01: begin
-		     word_in <= regs[rs];
-		     address_bus <= imm;
-		     w_enable <= 1;
-		 end
-		 2'b10: begin
-		     address_bus <= imm;
-		     r_enable <= 1;
-		 end
-		 2'b11: begin
-		     alu_enable <= 1;
-		 end
-	     endcase 
-        end
-    end
-
-    always @ (posedge alu_rdy)
-    begin
-	if (opcode == `OUTW) begin
-	    $strobe(y);
-        end else if (opcode != `HLT) begin
-	    if (opcode != `NOP) begin
-	        regs[rd] = y; 
-	        alu_enable = 0;
-                pc_control = 2;
-	    end
-	end
-    end
+    // control signals (depend on current state)
+    wire en_i;		// enable program counter (increment pc)
+    wire decod_en;      // enable instruction decoder
+    wire alu_en;        // alu enable
+    wire mem_ren;	// memory read enable 
+    wire mem_wen;	// memory write enable
+    wire wen_regs;	// write enable registers
     
-    alu a (
-	.func(opcode),
-	.enable(alu_enable),
-	.x2(regs[rs]),
-	.x1(regs[rd]),
-	.imm(imm),
-	.y(y),
-	.rdy(alu_rdy)
+    assign mem_ren = state[1];
+    assign decod_en = state[2];
+    assign alu_en = state[3];
+    assign wen_regs = state[3];
+    assign en_i = state[4];
+
+    assign address_bus = pc;
+    assign instr = data_r;
+
+    program_counter p (
+	.rst(rst),
+	.en_inc(en_i),
+	.pc(pc)
     );
 
     memory m (
-	.clk(clk),
 	.rst(rst),
-	.w_enable(w_enable),
-	.r_enable(r_enable),
+	.clk(clk),
+	.we(mem_wen),
+	.re(mem_ren),
 	.address(address_bus),
-	.word_in(word_in),
-	.word_out(word_out),
+	.data_w(data_w),
+	.data_r(data_r),
 	.rdy(mem_rdy)
     );
 
+    alu a (
+	.en(alu_en),
+	.opcode(opcode),
+	.x1(x1),
+	.x2(x2),
+	.y(y)
+    );
+
+    regs r (
+	.we(wen_regs),
+	.i1(rs),
+	.i2(rd),
+	.y(y),
+	.x1(x1),
+	.x2(x2)
+    );
+
+    decoder d (
+	.en(decod_en),
+	.instr(instr),
+	.halt(halt),
+	.opcode(opcode),
+	.rs(rs),
+	.rd(rd)
+    );
+
+    moore_fsm fsm (
+	.clk(clk),
+	.rst(rst),
+	.en(enable),
+	.state(state),
+	.mem_rdy(mem_rdy),
+	.halt(halt)
+    );
 endmodule

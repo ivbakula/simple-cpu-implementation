@@ -1,38 +1,30 @@
-`include "definitions.hv"
-
 module alu (
-    input enable,
-    input rst,
-    input [5:0]func,
+    input en,
+    input [5:0] opcode,
     input [31:0] x1,
     input [31:0] x2,
-    input [15:0] imm,
-    output reg [31:0] y,
-    output reg rdy
+    output reg [31:0] y
     );
-    
-    always @ (posedge rst) begin rdy = 0; end
-    always @ (negedge enable) begin rdy = 0; end
 
-    always @ (posedge enable)
+    localparam ADD = 6'b000100;
+    localparam SUB = 6'b000101;
+    localparam SHR = 6'b000110;
+    localparam SHL = 6'b000111;
+    localparam AND = 6'b001000;
+    localparam OR  = 6'b001001;
+    localparam XOR = 6'b001010;
+
+    always @ ( * ) 
     begin
-	if (enable == 1) begin
-	    case (func)
-	        `ADD: begin y <= x1 + x2;  rdy <= 1; end
-		`SUB: begin y <= x1 - x2;  rdy <= 1; end
-		`SHR: begin y <= x1 >> x2; rdy <= 1; end
-		`SHL: begin y <= x1 << x2; rdy <= 1; end
-		`AND: begin y <= x1 & x2;  rdy <= 1; end
-		`OR:  begin y <= x1 | x2;  rdy <= 1; end
-		`XOR: begin y <= x1 ^ x2;  rdy <= 1; end
-		`MV:  begin 
-		      if (imm[15] == 1) y <= {16'd65535, imm}; // sign extension
-		      else y <= imm;
-		      rdy <= 1; 
-		 end
-		`NOP: begin rdy <= 1; end
-		`HLT: begin rdy <= 1; end
-		`OUTW: begin y <= x2; rdy <= 1; end
+	if (en) begin
+	    case (opcode)
+		ADD: y = x2 + x1;
+		SUB: y = x2 - x1;
+		SHR: y = x2 >> x1;
+		SHL: y = x2 << x1;
+		AND: y = x2 & x1;
+		OR:  y = x2 | x1;
+		XOR: y = x2 ^ x1;
 	    endcase
 	end
     end
