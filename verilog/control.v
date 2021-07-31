@@ -63,30 +63,25 @@ module control (
 	.rdy(mem_rdy)
     );
 
-    alu a (
+    execute exe (
+	.rst(rst),
 	.en(alu_en),
+	.pfix(pfix),
 	.opcode(opcode),
-	.x1(x1),
-	.x2(x2),
-	.y(y)
-    );
-
-    regs r (
-	.we(wen_regs),
-	.i1(rs),
-	.i2(rd),
-	.y(y),
-	.x1(x1),
-	.x2(x2)
+	.rs(rs),
+	.rd(rd),
+	.imm(imm)
     );
 
     decoder d (
 	.en(decod_en),
 	.instr(instr),
 	.halt(halt),
+	.pfix(pfix),
 	.opcode(opcode),
 	.rs(rs),
-	.rd(rd)
+	.rd(rd),
+	.imm(imm)
     );
 
     moore_fsm fsm (

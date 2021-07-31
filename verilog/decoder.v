@@ -18,13 +18,11 @@ module decoder (
 	    rs = instr[23:20];
 	    rd = instr[19:16];
 	    imm = instr[15:0];
-	    /*
 	    $strobe("pfix: %b", pfix);
 	    $strobe("opcode: %b", opcode);
 	    $strobe("rs: %b", rs);
 	    $strobe("rd: %b", rd);
 	    $strobe("imm: %b", imm);
-	    */
 	    if (opcode == HLT)
 		halt = 1;
 	    else
