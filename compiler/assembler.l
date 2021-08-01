@@ -44,9 +44,9 @@ NAME [._a-zA-Z]+
 "rbp"|"RBP" { yylval = 0xf; return REGISTER; }
 
 "nop"|"NOP" { yylval = 0x0; return OPCODE_NOP; }
-"ldw"|"LDW" { yylval = 0x1; return OPCODE_MEM_RD; }
-"stw"|"STW" { yylval = 0x2; return OPCODE_MEM_WR; }
-"mv"|"MV" { yylval = 0x3; return OPCODE_ALU; }
+"ldw"|"LDW" { yylval = 0x1; return OPCODE_RD; }
+"stw"|"STW" { yylval = 0x2; return OPCODE_WR; }
+"mv"|"MV" { yylval = 0x3; return OPCODE_RD; }
 
 "add"|"ADD" { yylval = 0x4; return OPCODE_ALU; }
 "sub"|"SUB" { yylval = 0x5; return OPCODE_ALU; }
@@ -59,8 +59,14 @@ NAME [._a-zA-Z]+
 "xor"|"XOR" { yylval = 0xa; return OPCODE_ALU; }
 
 "hlt"|"HLT" { yylval = 0xb; return OPCODE_HLT; }
-"inw"|"INW" { yylval = 0xc; return OPCODE_IO; }
-"outw"|"OUTW" { yylval = 0xd; return OPCODE_IO; }
+"outw"|"OUTW" { yylval = 0xc; return OPCODE_IO; }
+
+"bgt"|"BGT" { yylval = 0b01101; return OPCODE_BRANCH_CD; }
+"beq"|"BEQ" { yylval = 0b01110; return OPCODE_BRANCH_CD; }
+"bge"|"BGE" { yylval = 0b01111; return OPCODE_BRANCH_CD; }
+"blt"|"BLT" { yylval = 0b10000; return OPCODE_BRANCH_CD; }
+"ble"|"BLE" { yylval = 0b10001; return OPCODE_BRANCH_CD; }
+"brn"|"BRN" { yylval = 0b10010; return OPCODE_BRANCH_UCD; }
 
 {NEG}?{HEX} { yylval = (int)strtol(yytext, NULL, 0); printf("yylval = %d\n", yylval); return CONST; }
 {NEG}?{BIN} { bin2int(yytext, &yylval); return CONST; }

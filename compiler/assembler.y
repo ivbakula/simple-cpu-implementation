@@ -6,7 +6,7 @@
 #include <stdbool.h>
 
 #include "hashtable.h"
-//#define DEBUG_INSTRUCTION
+#define DEBUG_INSTRUCTION
 int yylex(void);
 void yyerror(char *);
 
@@ -18,23 +18,14 @@ struct instruction_fields {
 	int imm : 16;
 	unsigned int rd : 4;
 	unsigned int rs : 4;
-	unsigned int opcode : 6;
-	unsigned int prefix : 2;
+	unsigned int opcode : 5;
+	unsigned int func: 2;
+	unsigned int has_imm: 1;
 };
 
 union encode_instruction {
 	unsigned int data;
 	struct instruction_fields f;
-};
-
-struct prefix {
-	unsigned char dst;
-	unsigned char src;
-};
-
-union encode_prefix {
-	unsigned char data;
-	struct prefix p;
 };
 
 struct code {
@@ -59,7 +50,6 @@ struct hash_table *symbols;
 unsigned int text[256] = {0};
 int current = 0;
 union encode_instruction instr;
-union encode_prefix pfix;
 
 %}
 
@@ -68,17 +58,20 @@ union encode_prefix pfix;
 
 %token REGISTER
 %token OPCODE_NOP
-%token OPCODE_MEM_RD
-%token OPCODE_MEM_WR
+%token OPCODE_RD
+%token OPCODE_WR
 %token OPCODE_ALU
 %token OPCODE_HLT
 %token OPCODE_IO
+%token OPCODE_BRANCH_CD      // conditional branch
+%token OPCODE_BRANCH_UCD     // unconditional branch
 
 %%
 program: 
        program alu{ generate_instruction(); }
        | program mem_rd { generate_instruction(); }
        | program mem_wr { generate_instruction(); }
+       | program brnch { generate_instruction(); }
        | program io { generate_instruction(); }
        | program halt { generate_instruction(); }
        | program nop { generate_instruction(); }
@@ -96,62 +89,110 @@ halt:
 nop:
    OPCODE_NOP
 	{
-		pfix.data = 0;
+		instr.data = 0;
 	}
 	;
-/* io instructions are just just for emulator. DO NOT USE THEM ON HARDWARE (not * implemented) */
 io:
   OPCODE_IO '%'src_reg
 	{
-		pfix.data = 0;
+	        instr.f.has_imm= 0;
+		instr.f.func = 3;
 		instr.f.opcode = $1;
 	}
 	;
 alu:
    OPCODE_ALU '%'src_reg',' '%'dst_reg
 	{ 
-		pfix.data = 0;
+		instr.f.has_imm= 0;
+		instr.f.func = 0;
 		instr.f.opcode = $1; 
 	}
    | OPCODE_ALU '$'imm ',' '%'dst_reg
 	{
-		pfix.data = 3;
+		instr.f.has_imm = 1;
+		instr.f.func = 0;
 		instr.f.opcode = $1;
 	}
    | OPCODE_ALU '$'LABEL ',' '%'dst_reg
 	{
-		pfix.data = 0;
+	        instr.f.has_imm = 1;
+		instr.f.func = 0;
 		instr.f.opcode = $1;
 		is_labeled = true;
 	}
    ;
 
 mem_rd:
-      OPCODE_MEM_RD '('LABEL')'',' '%'dst_reg
+      OPCODE_RD '('LABEL')'',' '%'dst_reg
 	{
-		pfix.data = 2;
+	        instr.f.has_imm = 1;
+		instr.f.func = 1;
 		instr.f.opcode = $1;
 	}
-      | OPCODE_MEM_RD '('imm')' ',' '%'dst_reg
+      | OPCODE_RD '('imm')' ',' '%'dst_reg
 	{
-		pfix.data = 2;
+	        instr.f.has_imm = 1;
+		instr.f.func = 1;
+		instr.f.opcode = $1;
+	}
+      | OPCODE_RD '$'imm ',' '%'dst_reg
+        {
+		instr.f.has_imm = 1;
+		instr.f.func = 1;
+		instr.f.opcode = $1;
+	}
+      | OPCODE_RD '%'src_reg ',' '%'dst_reg
+	{
+		instr.f.has_imm = 0;
+		instr.f.func = 1;
 		instr.f.opcode = $1;
 	}
       ;
 
 mem_wr:
-      OPCODE_MEM_WR '%'src_reg ',' '('LABEL')'
+      OPCODE_WR '%'src_reg ',' '('LABEL')'
 	{
-		pfix.data = 1;
+		instr.f.has_imm = 1; 
+		instr.f.func = 1;
 		instr.f.opcode = $2;
 		is_labeled = true;
 	}
-      | OPCODE_MEM_WR '%'src_reg',' '('imm')'
+      | OPCODE_WR '%'src_reg',' '('imm')'
         {
-		pfix.data = 1;
+		instr.f.has_imm = 1;
+		instr.f.func = 1;
 		instr.f.opcode = $1;
 	}
       ;
+
+brnch:
+     OPCODE_BRANCH_CD '%'src_reg ',' '%'dst_reg ',' LABEL
+	{
+		instr.f.has_imm = 1;
+		instr.f.func = 2;
+		instr.f.opcode = $2;
+		is_labeled = true;
+	}
+     | OPCODE_BRANCH_CD '%'src_reg ',' '%'dst_reg ',' imm
+	{
+		instr.f.has_imm = 1;
+		instr.f.func = 2;
+		instr.f.opcode = $1;
+	}
+     | OPCODE_BRANCH_UCD LABEL
+	{
+		instr.f.has_imm = 1;
+		instr.f.func = 2;
+		instr.f.opcode = $2;
+		is_labeled = true;
+	}
+     | OPCODE_BRANCH_UCD imm
+	{
+		instr.f.has_imm = 1;
+		instr.f.func = 2;
+		instr.f.opcode = $1;
+	}
+     ;
 
 imm:
    CONST {instr.f.imm = $1; }
@@ -167,7 +208,8 @@ dst_reg:
 
 void debug_instruction()
 {
-	printf("prefix: %d\n", pfix.data); 
+	printf("has_imm: %d\n", instr.f.has_imm); 
+	printf("func: %d\n", instr.f.func);
 	printf("opcode: %d\n", instr.f.opcode);
 	printf("rs: %d\n", instr.f.rs);
 	printf("rd: %d\n", instr.f.rd);
@@ -181,7 +223,6 @@ struct code *new_slot(bool has_reference, char *label)
 	if (!c)
 		return NULL;
 
-	instr.f.prefix = pfix.data;
 	c->has_reference = has_reference;
 	c->instruction = instr.data; 
 	c->index = current;
@@ -210,7 +251,6 @@ void generate_instruction()
 		memset(yyname, '\0', 256);
 
 	is_labeled = false;
-	pfix.data = 0;
 	instr.data = 0;
 }
 
@@ -224,7 +264,6 @@ void insert_new_label()
 		yyerror(err);
 		exit(-1);
 	}
-	pfix.data = 0;
 	memset(yyname, '\0', 256);
 }
 
