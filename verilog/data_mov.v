@@ -4,6 +4,7 @@ module data_mov (
     input [4:0] opcode,
     input [15:0] imm,
     input [31:0] x,
+    input [31:0] rsp,
     output reg [31:0] y,
     output reg [1:0] read,     // 2'b01 read memory, 2'b10 read regs, 2'b00 don't read
     output reg [1:0] write,    // 2'b01 write memory, 2'b10 write regs, 2'b00 don't read
@@ -13,6 +14,8 @@ module data_mov (
     localparam LDW = 5'b00001;
     localparam STW = 5'b00010;
     localparam MV =  5'b00011;
+    localparam PUSH = 5'b10011;
+    localparam POP = 5'b10100;
 
     localparam REGS = 2'b10;
     localparam MEMORY = 2'b01; 
@@ -42,6 +45,19 @@ module data_mov (
 		    mem_addr = imm;
 		    write = REGS;
 		    y = x;
+		end
+		PUSH: begin
+		    if (has_imm) read = NOTHING;
+		    else read = REGS;
+		    y = src;
+		    mem_addr = rsp;
+		    write = MEMORY;
+		end
+		POP: begin
+		    read = MEMORY;
+		    mem_addr = rsp;
+		    write = REGS;
+		    y = x; 
 		end
 	    endcase
          else begin

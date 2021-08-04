@@ -5,12 +5,14 @@ module regfile (
     input [3:0] i2,
     input [31:0] y,
     output reg [31:0] x1,
-    output reg [31:0] x2
+    output reg [31:0] x2,
+    output [31:0] rsp
     );
 
     reg signed [31:0] regs [15:0];
     integer i;
 
+    assign rsp = regs[14];
     always @ ( * )
     begin
 	if (rst) begin

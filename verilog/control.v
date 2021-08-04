@@ -45,6 +45,7 @@ module control (
     wire [1:0] read;
     wire [1:0] write;
     wire [31:0] mem_addr;
+    wire [31:0] rsp;
 
     wire [31:0] y;
 
@@ -133,7 +134,8 @@ module control (
 	.i2(rd),
 	.y(y),
 	.x1(x1),
-	.x2(x2)
+	.x2(x2),
+	.rsp(rsp)
     );
 
     data_mov dm (
@@ -145,7 +147,8 @@ module control (
 	.y(y_mov),
 	.read(read),
 	.write(write),
-	.mem_addr(mem_addr)
+	.mem_addr(mem_addr),
+	.rsp(rsp)
     );
 
     decoder d (

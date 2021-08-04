@@ -48,7 +48,6 @@ module testbench;
 	if (cnt == 1) rst = 0;
 	else cnt = cnt + 1;
     end
-/*
     initial begin
 	$dumpfile("states.vcd");
 	$dumpvars(1, clk);
@@ -66,6 +65,7 @@ module testbench;
 
 	#100000;
 	$strobe("mem @ 1024: ", ctrl.m.bank[1024]);
+	$strobe("mem @ 1025: ", ctrl.m.bank[1025]);
+	$strobe("mem @ 1026: ", ctrl.m.bank[1026]);
     end
-    */
 endmodule

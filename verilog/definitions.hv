@@ -23,6 +23,8 @@
 
 `define PUSH 5'b10011
 `define POP 5'b10100
+`define CALL 5'b10101
+`define RET 5'b10110
 
 `define FORMAT_PREFIX_R 2'b00
 `define FORMAT_PREFIX_MR 2'b01
