@@ -24,7 +24,7 @@ module memory (
         end
     end
 
-    always @ ( posedge clk )
+    always @ ( negedge clk )
     begin
 	if (!rst) begin
 	    if (re) begin data_r <= bank[address]; rdy <= 1; end

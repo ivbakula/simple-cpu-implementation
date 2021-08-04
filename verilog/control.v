@@ -4,6 +4,9 @@ module control (
     input enable
     );
 
+    localparam REGS = 2'b10;
+    localparam MEMORY = 2'b01;
+
     reg high = 1;
     reg low = 0;
 
@@ -36,8 +39,12 @@ module control (
     wire [31:0] x1;
     wire [31:0] x2;
     wire [31:0] y_alu;
-    wire [31:0] y_mov;
 
+    wire [31:0] y_mov;
+    wire [31:0] x;
+    wire [1:0] read;
+    wire [1:0] write;
+    wire [31:0] mem_addr;
 
     wire [31:0] y;
 
@@ -49,11 +56,12 @@ module control (
     wire en_brnch;      // enable branch block
     wire en_io;         // enable IO block 
     wire en_pc;		// enable program counter (increment pc)
+    wire fetch;
 
     wire wen_regs;	// write enable registers
     wire mem_wen;	// memory write enable
 
-    assign mem_ren = state[1];
+    assign fetch = state[1];
     assign decod_en = state[2];
     assign alu_en = state[3];
     assign mov_en = state[4];
@@ -61,12 +69,16 @@ module control (
     assign en_io = state[6];
     assign en_pc = state[7];
 
-    assign address_bus = pc;
-    assign instr = data_r;
-
-    assign wen_regs = (alu_en) ? high : ((mov_en) ? high : low); // state[3] -alu state[4] - data mov
+    assign wen_regs = (alu_en) ? high : ((write == REGS) ? high : low); // state[3] -alu state[4] - data mov
     assign y = (alu_en) ? y_alu : ((mov_en) ? y_mov : 32'bz);
-   
+    assign mem_ren = (fetch) ? high : ((read == MEMORY) ? high : low);
+    assign mem_wen = (write == MEMORY) ? high : low; 
+
+    assign x = (read == MEMORY) ? data_r : x1;
+    assign {instr, x} = (read != MEMORY) ? {data_r, 32'bz} : {32'bz, data_r};
+    assign address_bus = (fetch) ? pc : mem_addr;
+    assign data_w = (write == MEMORY) ? y : 32'bz;
+
 
     program_counter p (
 	.rst(rst),
@@ -129,8 +141,11 @@ module control (
 	.has_imm(has_imm),
 	.opcode(opcode),
 	.imm(imm),
-	.x1(x1),
-	.y(y_mov)
+	.x(x),
+	.y(y_mov),
+	.read(read),
+	.write(write),
+	.mem_addr(mem_addr)
     );
 
     decoder d (

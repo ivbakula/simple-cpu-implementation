@@ -21,6 +21,9 @@
 `define BLE 5'b10001
 `define BRN 5'b10010
 
+`define PUSH 5'b10011
+`define POP 5'b10100
+
 `define FORMAT_PREFIX_R 2'b00
 `define FORMAT_PREFIX_MR 2'b01
 `define FORMAT_PREFIX_RM 2'b10
