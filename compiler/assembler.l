@@ -39,7 +39,7 @@ NAME [._a-zA-Z]+
 "ra"|"RA" { yylval = 0xa; return REGISTER; }
 "rb"|"RB" { yylval = 0xb; return REGISTER; }
 "rc"|"RC" { yylval = 0xc; return REGISTER; }
-"rd"|"RD" { yylval = 0xd; return REGISTER; }
+"pc"|"pc" { yylval = 0xd; return REGISTER; }
 "rsp"|"RSP" { yylval = 0xe; return REGISTER; }
 "rbp"|"RBP" { yylval = 0xf; return REGISTER; }
 
@@ -67,6 +67,8 @@ NAME [._a-zA-Z]+
 "blt"|"BLT" { yylval = 0b10000; return OPCODE_BRANCH_CD; }
 "ble"|"BLE" { yylval = 0b10001; return OPCODE_BRANCH_CD; }
 "brn"|"BRN" { yylval = 0b10010; return OPCODE_BRANCH_UCD; }
+"push"|"PUSH" { yylval = 0b10011; return OPCODE_PUSH; }
+"pop"|"POP" { yylval = 0b10100; return OPCODE_POP; }
 
 {NEG}?{HEX} { yylval = (int)strtol(yytext, NULL, 0); printf("yylval = %d\n", yylval); return CONST; }
 {NEG}?{BIN} { bin2int(yytext, &yylval); return CONST; }

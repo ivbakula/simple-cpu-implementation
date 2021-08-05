@@ -51,6 +51,13 @@ unsigned int text[256] = {0};
 int current = 0;
 union encode_instruction instr;
 
+#define INSTR_INC_RSP 0x840e0001
+#define INSTR_DEC_RSP 0x850e0001
+#define INSTR_PUSH_PC 0x33d00000
+#define INSTR_POP_PC  0x340d0000
+#define INSTR_BRN_PC  0x52d00000
+#define INSTR_INC_PC  0x840d0001
+
 %}
 
 %token CONST
@@ -66,12 +73,20 @@ union encode_instruction instr;
 %token OPCODE_BRANCH_CD      // conditional branch
 %token OPCODE_BRANCH_UCD     // unconditional branch
 
+%token OPCODE_PUSH
+%token OPCODE_POP
+
+%token OPCODE_CALL
+%token OPCODE_RET
+
 %%
 program: 
        program alu{ generate_instruction(); }
        | program mem_rd { generate_instruction(); }
        | program mem_wr { generate_instruction(); }
        | program brnch { generate_instruction(); }
+       | program stack { generate_instruction(); } 
+       | program subroutine { generate_instruction(); }
        | program io { generate_instruction(); }
        | program halt { generate_instruction(); }
        | program nop { generate_instruction(); }
@@ -165,6 +180,29 @@ mem_wr:
 	}
       ;
 
+stack:
+     OPCODE_PUSH '%'src_reg
+	{
+		unsigned int tmp = instr.data;
+		instr.data = INSTR_INC_RSP;
+		generate_instruction();
+
+		instr.data = tmp;
+		instr.f.has_imm = 0;
+		instr.f.func = 1;
+		instr.f.opcode = $1;
+	}
+    | OPCODE_POP '%'dst_reg
+	{
+		instr.f.has_imm = 0;
+		instr.f.func = 1;
+		instr.f.opcode = $1;
+		generate_instruction();
+
+		instr.data = INSTR_DEC_RSP;
+	}
+    ;
+
 brnch:
      OPCODE_BRANCH_CD '%'src_reg ',' '%'dst_reg ',' LABEL
 	{
@@ -189,6 +227,12 @@ brnch:
      | OPCODE_BRANCH_UCD imm
 	{
 		instr.f.has_imm = 1;
+		instr.f.func = 2;
+		instr.f.opcode = $1;
+	}
+     | OPCODE_BRANCH_UCD '%' src_reg
+	{
+		instr.f.has_imm = 0;
 		instr.f.func = 2;
 		instr.f.opcode = $1;
 	}
