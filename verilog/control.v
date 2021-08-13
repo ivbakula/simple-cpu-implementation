@@ -3,173 +3,121 @@ module control (
     input rst,
     input enable
     );
-
-    localparam REGS = 2'b10;
-    localparam MEMORY = 2'b01;
-
-    reg high = 1;
+ 
     reg low = 0;
+    reg high = 1;
+    reg [31:0] nothing = 32'bz;
 
-    wire [8:0]state;
+    // state machine
+    wire [8:0] fsm_state;
 
-    // program counter 
+    // program counter
+    reg [3:0] pc_index = 4'b0001;
     wire [31:0] pc;
+    wire [31:0] pc_next;
+
+    // decoder ports
     wire [31:0] instr;
-
-    // branch module
-    wire [15:0] jmp_addr; 
-    wire st_flag;
-
-    // memory module
-    wire [31:0] address_bus;
-    wire [31:0] data_r;
-    wire [31:0] data_w;
-    wire mem_rdy;
-
-    // instruction fields
     wire halt;
     wire has_imm;
-    wire [1:0] func;
-    wire [4:0] opcode;
-    wire [3:0] rs;
+    wire [2:0] func;
+    wire [1:0] type;
+    wire [2:0] opcode;
     wire [3:0] rd;
-    wire [15:0] imm;
+    wire [20:0] imm;
 
-    // alu operands and data mov operands 
-    wire [31:0] x1;
-    wire [31:0] x2;
+    // alu ports
     wire [31:0] y_alu;
 
-    wire [31:0] y_mov;
-    wire [31:0] x;
-    wire [1:0] read;
-    wire [1:0] write;
-    wire [31:0] mem_addr;
-    wire [31:0] rsp;
+    // data module ports
+    localparam WRITE_REGFILE = 2'b01;
+    localparam WRITE_MEMORY = 2'b10;
+    wire [1:0]write_which;
+    wire [31:0] y_data;
+    wire ld_done;
 
-    wire [31:0] y;
+    // branch module ports
+    wire [20:0] offset;
+    wire st_flag;
 
-    // control signals (depend on current state)
-    wire mem_ren;	// memory read enable 
-    wire decod_en;      // enable instruction decoder
-    wire alu_en;        // alu enable
-    wire mov_en;        // data mov enable
-    wire en_brnch;      // enable branch block
-    wire en_io;         // enable IO block 
-    wire en_pc;		// enable program counter (increment pc)
-    wire fetch;
+    // regfile ports
+    wire wen_regs;
+    wire [3:0] i1;       // first source register index
+    wire [3:0] i2;       // second source register index
+    wire [3:0] id;       // destination register index 
+    wire [31:0] y;       // y data write line 
+    wire [31:0] x1;      // first source register data
+    wire [31:0] x2;      // second source register data
+    wire [31:0] xd;      // destination register data
 
-    wire wen_regs;	// write enable registers
-    wire mem_wen;	// memory write enable
+    // data cache ports
+    wire [31:0] i_addr;
+    wire [31:0] o_data;
+    wire [31:0] i_data;
+    wire i_write; 
 
-    assign fetch = state[1];
-    assign decod_en = state[2];
-    assign alu_en = state[3];
-    assign mov_en = state[4];
-    assign en_brnch = state[5];
-    assign en_io = state[6];
-    assign en_pc = state[7];
+    assign wen_regs = (fsm_state[3] | fsm_state[7]) ? high : (
+	(write_which == WRITE_REGFILE) ? high : low
+    );
+    assign y = (fsm_state[3]) ? y_alu : (
+	(fsm_state[7]) ? pc_next : (
+	    (write_which == WRITE_REGFILE) ? y_data : 32'bz
+        )
+    );
+    assign id = (fsm_state[7]) ? pc_index : rd;
+    assign i_write = (write_which == WRITE_MEMORY) ? high : low;
 
-    assign wen_regs = (alu_en) ? high : ((write == REGS) ? high : low); // state[3] -alu state[4] - data mov
-    assign y = (alu_en) ? y_alu : ((mov_en) ? y_mov : 32'bz);
-    assign mem_ren = (fetch) ? high : ((read == MEMORY) ? high : low);
-    assign mem_wen = (write == MEMORY) ? high : low; 
-
-    assign x = (read == MEMORY) ? data_r : x1;
-    assign {instr, x} = (read != MEMORY) ? {data_r, 32'bz} : {32'bz, data_r};
-    assign address_bus = (fetch) ? pc : mem_addr;
-    assign data_w = (write == MEMORY) ? y : 32'bz;
-
-
-    program_counter p (
-	.rst(rst),
-	.en_inc(en_pc),
-	.st_flag(st_flag),
-	.jmp_addr(jmp_addr),
-	.pc(pc)
+    decoder d (
+	.en(fsm_state[2]), .instr(instr), .halt(halt),
+	.func(func),       .type(type),   .opcode(opcode),
+	.rd(rd),           .r1(i1),       .r2(i2),
+	.has_imm(has_imm), .imm(imm)
     );
 
-    input_output io (
-	.en(en_io),
-	.opcode(opcode),
-	.x1(x1)
-    );
-
-    memory m (
-	.rst(rst),
-	.clk(clk),
-	.we(mem_wen),
-	.re(mem_ren),
-	.address(address_bus),
-	.data_w(data_w),
-	.data_r(data_r),
-	.rdy(mem_rdy)
-    );
-
-    branch b (
-	.en(en_brnch),
-	.pc(en_pc),
-	.opcode(opcode),
-	.x1(x1),
-	.x2(x2),
-	.imm(imm),
-	.jmp_addr(jmp_addr),
-	.st_flag(st_flag)
+    data_mov dt (
+	.en(fsm_state[4]), .opcode(opcode), .xs(x1),
+	.xd(xd),           .imm(imm),       .i_addr(i_addr),
+	.o_data(o_data),   .i_data(i_data), .write_which(write_which),
+	.y(y_data),        .clk(clk),       .done(ld_done)
     );
 
     alu a (
-	.en(alu_en),
-	.has_imm(has_imm),
-	.opcode(opcode),
-	.x1(x1),
-	.x2(x2),
-	.imm(imm),
-	.y(y_alu)
+	.en(fsm_state[3]), .has_imm(has_imm), .opcode(opcode),
+        .x1(x1),           .x2(x2),           .xd(xd), 
+	.imm(imm),         .y(y_alu)
     );
 
-    regfile r (
-	.we(wen_regs),
-	.rst(rst),
-	.i1(rs),
-	.i2(rd),
-	.y(y),
-	.x1(x1),
-	.x2(x2),
-	.rsp(rsp)
+    branch brn (
+	.en(fsm_state[5]), .opcode(opcode), .x1(xd), 
+	.x2(x1),           .imm(imm),       .offset(offset),
+	.st_flag(st_flag)
     );
 
-    data_mov dm (
-	.en(mov_en),
-	.has_imm(has_imm),
-	.opcode(opcode),
-	.imm(imm),
-	.x(x),
-	.y(y_mov),
-	.read(read),
-	.write(write),
-	.mem_addr(mem_addr),
-	.rsp(rsp)
-    );
-
-    decoder d (
-	.en(decod_en),
-	.instr(instr),
-	.halt(halt),
-	.has_imm(has_imm),
-	.func(func),
-	.opcode(opcode),
-	.rs(rs),
-	.rd(rd),
-	.imm(imm)
+    program_counter p (
+	.en(fsm_state[7]), .pc_curr(pc), .st_flag(st_flag), 
+	.pc_nxt(pc_next),  .offset(offset)
     );
 
     moore_fsm fsm (
-	.clk(clk),
-	.rst(rst),
-	.en(enable),
-	.state(state),
-	.func(func),
-	.mem_rdy(mem_rdy),
-	.halt(halt)
+	.rst(rst),   .clk(clk),   .en(enable),
+	.func(func), .halt(halt), .state(fsm_state),
+	.ld_done(ld_done)
+    );
+
+    regfile r (
+	.we(wen_regs), .clk(clk), .rst(rst), 
+        .i1(i1),       .i2(i2),   .id(id), 
+        .y(y),         .x1(x1),   .x2(x2),
+        .xd(xd),       .pc(pc)
+    );
+
+    bram data_cache (
+	.clk(clk),       .i_addr(i_addr), .i_write(i_write),
+	.i_data(o_data), .o_data(i_data)
+    );
+
+    bram instr_cache (
+	.clk(clk),        .i_addr(pc),   .i_write(low),
+	.i_data(nothing), .o_data(instr)
     );
 endmodule

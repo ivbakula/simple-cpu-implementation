@@ -5,8 +5,8 @@ module moore_fsm (
     input en,   // enable
 
     // control unit control signals
-    input [1:0]func,
-    input mem_rdy,
+    input ld_done,
+    input [2:0]func,
     input halt,
 
     output [8:0] state
@@ -21,6 +21,11 @@ module moore_fsm (
     localparam STATE_Io =      9'b001000000;  // 6
     localparam STATE_IncPC =   9'b010000000;  // 7
     localparam STATE_Halt =    9'b100000000;  // 8
+
+    localparam FUNC_BLOCK_ALU = 3'b001;
+    localparam FUNC_BLOCK_DATA = 3'b010;
+    localparam FUNC_BLOCK_BRANCH = 3'b011;
+    localparam FUNC_BLOCK_SPEC   = 3'b000;
 
     reg [8:0] current_state;
     reg [8:0] next_state;
@@ -38,20 +43,19 @@ module moore_fsm (
 	case (current_state)
 	    STATE_Initial: if (en) next_state = STATE_Fetch;
 
-	    STATE_Fetch: if (mem_rdy) next_state = STATE_Decode;
+	    STATE_Fetch: next_state = STATE_Decode;
 
 	    STATE_Decode: begin
 		if (halt) next_state = STATE_Halt;
 		else case (func)
-		         2'b00: next_state = STATE_Alu;
-		         2'b01: next_state = STATE_DataMov;
-			 2'b10: next_state = STATE_Branch;
-			 2'b11: next_state = STATE_Io;
+		         FUNC_BLOCK_ALU: next_state = STATE_Alu;
+		         FUNC_BLOCK_DATA: next_state = STATE_DataMov;
+			 FUNC_BLOCK_BRANCH: next_state = STATE_Branch;
 	             endcase
 	    end
 
 	    STATE_Alu: next_state = STATE_IncPC;
-	    STATE_DataMov: next_state = STATE_IncPC;
+	    STATE_DataMov: if(ld_done) next_state = STATE_IncPC;
 	    STATE_Io: next_state = STATE_IncPC;
 	    STATE_Branch: next_state = STATE_IncPC;
 	    STATE_IncPC: next_state = STATE_Fetch;
