@@ -2,14 +2,14 @@ module program_counter (
     input en,		// pc incrememnt enable 
     input [31:0] pc_curr,
     input st_flag,              // to branch (1) or not to branch (0)
-    input [20:0] offset,           
+    input [31:0] offset,           
     output reg [31:0] pc_nxt    // program counter 
     );
     always @ ( * )
     begin
 	if (en) begin 
 	    if (st_flag) pc_nxt = pc_curr + offset;
-            else pc_nxt = pc_curr + 1;
+            else pc_nxt = pc_curr + 4;
 	end
     end
 endmodule
@@ -28,9 +28,9 @@ module decoder (
     output reg [20:0] imm
     );
 
-    localparam Type_A = 2'b01;
-    localparam Type_B = 2'b10;
-    localparam Type_C = 2'b11;
+    localparam Type_A = 2'b00;
+    localparam Type_B = 2'b01;
+    localparam Type_C = 2'b10;
     always @ ( * )
     begin
 	if (en) begin
@@ -44,8 +44,14 @@ module decoder (
 	    r2 = instr[14:11];
 
 	    case (type)
-		Type_A: imm = instr[14:0];
-		Type_B: imm = instr[10:0];
+		Type_A: begin 
+		    if (instr[14]) imm = {6'b111111, instr[14:0]}; 
+		    else imm = {6'b000000, instr[14:0]};
+		end
+ 	        Type_B: begin 
+		    if (instr[10]) imm = {10'b1111111111, instr[10:0]};
+		    else imm = {10'b0000000000, instr[10:0]};
+	        end
 		Type_C: imm = instr[20:0];
 	    endcase
 
@@ -53,15 +59,6 @@ module decoder (
 		if (opcode == 3'b111) halt = 1;
 	    end else
 		halt = 0;
-
-/*
-	    $strobe("func: ", func);
-	    $strobe("type: ", type);
-	    $strobe("r1: ", r1);
-	    $strobe("r2: ", r2);
-	    $strobe("rd: ", rd);
-	    $strobe("imm: ", imm);
-*/
 	end
     end
 endmodule

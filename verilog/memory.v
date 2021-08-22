@@ -1,4 +1,4 @@
-module bram #(parameter ADDR_WIDTH = 32, DATA_WIDTH = 32, DEPTH = 64) (
+module bram #(parameter ADDR_WIDTH = 32, DATA_WIDTH = 8, DEPTH = 2250) (
     input wire clk,
     input wire [ADDR_WIDTH-1:0] i_addr,
     input wire i_write,
@@ -10,9 +10,9 @@ module bram #(parameter ADDR_WIDTH = 32, DATA_WIDTH = 32, DEPTH = 64) (
     always @ ( negedge clk )
     begin
 	if (i_write) begin
-	    memory_bank[i_addr] <= i_data;
+	    {memory_bank[i_addr], memory_bank[i_addr+1], memory_bank[i_addr+2], memory_bank[i_addr+3]} <= i_data;
 	end else begin
-	    o_data <= memory_bank[i_addr];
+	    o_data <= {memory_bank[i_addr], memory_bank[i_addr+1], memory_bank[i_addr+2], memory_bank[i_addr+3]};
 	end
     end
 endmodule

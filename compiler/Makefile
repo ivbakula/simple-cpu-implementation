@@ -1,6 +1,6 @@
 LL = lex
 YY = yacc -d
-CC = gcc
+CC = clang 
 
 LEX=lex.yy.c
 PARSER=y.tab.c y.tab.h

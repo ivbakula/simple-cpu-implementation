@@ -27,7 +27,7 @@ module alu (
 	    case (opcode)
 		OPCODE_ADD: y = xd + src; 
 		OPCODE_ADDI: y = x1 + x2 + imm; 
-		OPCODE_SUB: y = xd - src;
+		OPCODE_SUB: y = xd - src - imm;
 		OPCODE_SHR: y = xd >> src;
 		OPCODE_SHL: y = xd << src;
 		OPCODE_AND: y = xd & src;
@@ -40,11 +40,12 @@ endmodule
 
 module branch (
     input en,
-    input [2:0]opcode,
-    input [31:0]x1,
-    input [31:0]x2,
-    input [20:0]imm,
-    output [20:0]offset,
+    input [2:0] opcode,
+    input [31:0] x1,
+    input [31:0] x2,
+    input [31:0] xd,
+    input [20:0] imm,
+    output reg [31:0] offset,
     output reg st_flag 
     );
 
@@ -55,11 +56,10 @@ module branch (
     localparam OPCODE_BLE = 3'h4;
     localparam OPCODE_BRN = 3'h5;
 
-    assign offset = imm;
-
     always @ ( * )
     begin
 	if (en) begin
+	    offset = xd + imm;
 	    case (opcode)
 		OPCODE_BGT: if (x1 > x2) st_flag = 1;
 		OPCODE_BEQ: if (x1 == x2) st_flag = 1;

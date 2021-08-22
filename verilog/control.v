@@ -37,7 +37,7 @@ module control (
     wire ld_done;
 
     // branch module ports
-    wire [20:0] offset;
+    wire [31:0] offset;
     wire st_flag;
 
     // regfile ports
@@ -88,9 +88,9 @@ module control (
     );
 
     branch brn (
-	.en(fsm_state[5]), .opcode(opcode), .x1(xd), 
-	.x2(x1),           .imm(imm),       .offset(offset),
-	.st_flag(st_flag)
+	.en(fsm_state[5]), .opcode(opcode), .x1(x1), 
+	.x2(x2),           .xd(xd),         .imm(imm),       
+	.offset(offset),   .st_flag(st_flag)
     );
 
     program_counter p (
