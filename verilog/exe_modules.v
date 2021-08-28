@@ -130,6 +130,8 @@ module data_mov (
 		end
 	    endcase
          else begin
+	     i_addr = 32'bz;
+             o_data = 32'bz;
 	     write_which = WRITE_NOTHING;
 	     load_state = 2'b00;
 	     done = 0;
