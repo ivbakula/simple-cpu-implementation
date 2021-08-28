@@ -8,7 +8,7 @@ module program_counter (
     always @ ( * )
     begin
 	if (en) begin 
-	    if (st_flag) pc_nxt = pc_curr + offset;
+	    if (st_flag) pc_nxt = offset;
             else pc_nxt = pc_curr + 4;
 	end
     end

@@ -88,7 +88,7 @@ module control (
     );
 
     branch brn (
-	.en(fsm_state[5]), .opcode(opcode), .x1(x1), 
+	.en(fsm_state[5]), .reset(fsm_state[1]), .opcode(opcode), .x1(x1), 
 	.x2(x2),           .xd(xd),         .imm(imm),       
 	.offset(offset),   .st_flag(st_flag)
     );

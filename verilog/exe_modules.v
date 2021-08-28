@@ -40,6 +40,7 @@ endmodule
 
 module branch (
     input en,
+    input reset,
     input [2:0] opcode,
     input [31:0] x1,
     input [31:0] x2,
@@ -50,18 +51,24 @@ module branch (
     );
 
     localparam OPCODE_BEQ = 3'h0;
-    localparam OPCODE_BGT = 3'h1;
-    localparam OPCODE_BLT = 3'h2;
-    localparam OPCODE_BGE = 3'h3;
-    localparam OPCODE_BLE = 3'h4;
-    localparam OPCODE_BRN = 3'h5;
+    localparam OPCODE_BNE = 3'h1; 
+    localparam OPCODE_BGT = 3'h2;
+    localparam OPCODE_BLT = 3'h3;
+    localparam OPCODE_BGE = 3'h4;
+    localparam OPCODE_BLE = 3'h5;
+    localparam OPCODE_BRN = 3'h6;
 
+    wire [31:0]diff;
+    assign diff = {11'b11111111111, imm};
     always @ ( * )
     begin
+	if (reset) st_flag = 0;
 	if (en) begin
-	    offset = xd + imm;
+	    offset = xd + diff;
+	    $strobe("offset = xd + imm = %d + %d = %d", xd, imm, offset);
 	    case (opcode)
 		OPCODE_BGT: if (x1 > x2) st_flag = 1;
+		OPCODE_BNE: if (x1 != x2) st_flag = 1;
 		OPCODE_BEQ: if (x1 == x2) st_flag = 1;
 		OPCODE_BGE: if (x1 >= x2) st_flag = 1;
 	        OPCODE_BLT: if (x1 < x2) st_flag = 1;

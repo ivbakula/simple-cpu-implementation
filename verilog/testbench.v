@@ -134,16 +134,7 @@ module testbench;
 	$dumpfile("states.vcd");
 	$dumpvars(1, clk);
 	$dumpvars(1, ctrl.fsm_state);
-	$dumpvars(1, ctrl.x1);
-	$dumpvars(1, ctrl.x2);
-	$dumpvars(1, ctrl.xd);
-	$dumpvars(1, ctrl.y_data);
-	$dumpvars(1, ctrl.dt.load_state);
-	$dumpvars(1, ctrl.wen_regs);
-	$dumpvars(1, ctrl.y);
-	$dumpvars(1, ctrl.i1);
-	$dumpvars(1, ctrl.i2);
-        $dumpvars(1, ctrl.id);
-	$dumpvars(1, ctrl.ld_done);
+	$dumpvars(1, ctrl.pc);
+	$dumpvars(1, ctrl.st_flag);
     end
 endmodule
