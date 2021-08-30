@@ -31,6 +31,8 @@ void generate_atype_alu(int opcode, bool do_reloc, uint8_t relax_type);
 void generate_data(int opcode, bool do_reloc, uint8_t relax_type);
 void generate_branch_cnd(int opcode, bool do_reloc, uint8_t relax_type);
 void generate_branch_ucd(int opcode, bool do_reloc, uint8_t relax_type);
+void generate_io(int opcode, bool do_reloc, uint8_t relax_type);
+
 void generate_frag(union instr, uint8_t instr_type, bool do_reloc, uint8_t relax_type);
 void clear_instr();
 void insert_new_label();
@@ -48,6 +50,7 @@ void relax();
 %token OPCODE_BRANCH_CND	/* conditional branch */
 %token OPCODE_BRANCH_UCD	/* unconditional branch */
 %token OPCODE_PSEUDO_INC
+%token OPCODE_IO
 %token OPCODE_PSEUDO_DEC
 %token OPCODE_PSEUDO_MV
 %token OPCODE_PSEUDO_CALL
@@ -66,6 +69,7 @@ program:
        | program special { clear_instr(); }
        | program pseudo { clear_instr(); }
        | program label { clear_instr(); }
+       | program io { clear_instr(); }
        |
        ;
 
@@ -134,6 +138,11 @@ branch: OPCODE_BRANCH_CND '%'reg1 ',' '%'reg2 ',' imm'(' '%'regd')'
       | OPCODE_BRANCH_UCD '(''%'regd')' 
 	{ generate_branch_ucd($1, false, RELAX_NONE); }
       ;
+
+io: OPCODE_IO '%'regd
+     { generate_io($1, false, RELAX_NONE); }
+     ;
+
 pseudo:
       OPCODE_PSEUDO_INC '%'regd 
       { 
@@ -264,6 +273,17 @@ void generate_branch_ucd(int opcode, bool reloc, uint8_t relax_type)
 	instr.C.imm = instr_dt_fields.imm;
 
 	generate_frag(instr, INSTR_TYPE_C, reloc, relax_type);
+}
+
+void generate_io(int opcode, bool reloc, uint8_t relax_type)
+{
+	instr.A.func = FUNC_BLOCK_IO;
+	instr.A.type = INSTR_TYPE_A;
+	instr.A.opcode = opcode;
+	instr.A.rd = instr_dt_fields.regfile.regs.rd;
+	instr.A.imm = instr_dt_fields.imm;
+
+	generate_frag(instr, INSTR_TYPE_A, reloc, relax_type);
 }
 
 void debug_instr(struct frag *f)

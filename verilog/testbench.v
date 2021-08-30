@@ -17,7 +17,9 @@ module testbench;
     control ctrl (
 	.clk(clk),
 	.rst(rst),
-	.enable(chenable)
+	.enable(chenable),
+	.rx_line(rx_line),
+        .tx_line(tx_line)
     );
 
     initial begin
@@ -55,13 +57,15 @@ module testbench;
 	end
 
 	chenable = 1;
-	#100000;
+	@ (posedge ctrl.fsm_state[8])
 	data_1 = {ctrl.data_cache.memory_bank[4], ctrl.data_cache.memory_bank[5], ctrl.data_cache.memory_bank[6], ctrl.data_cache.memory_bank[7]};
 	data_2 = {ctrl.data_cache.memory_bank[8], ctrl.data_cache.memory_bank[9], ctrl.data_cache.memory_bank[10], ctrl.data_cache.memory_bank[11]};
 	$strobe("mem @ 4:", data_1);
 	$strobe("mem @ 8:", data_2);
 	$strobe("gpr0: ", ctrl.r.regs[5]);
 	$strobe("gpr1: ", ctrl.r.regs[6]);
+
+	@ (negedge ctrl.io.transceiver.tx_busy);
 	$finish;
     end
 
@@ -74,11 +78,10 @@ module testbench;
 	$dumpfile("states.vcd");
 	$dumpvars(1, clk);
 	$dumpvars(1, ctrl.fsm_state);
-	$dumpvars(1, ctrl.pc);
-	$dumpvars(1, ctrl.st_flag);
-	$dumpvars(1, ctrl.dt.load_state);
-	$dumpvars(1, ctrl.i_data);
-	$dumpvars(1, ctrl.o_data);
-	$dumpvars(1, ctrl.i_addr);
+	$dumpvars(1, ctrl.io_done);
+	$dumpvars(1, ctrl.ld_done);
+	$dumpvars(1, ctrl.tx_line);
+	$dumpvars(1, ctrl.rx_line);
+	$dumpvars(1, ctrl.io.transceiver.tx_busy);
     end
 endmodule

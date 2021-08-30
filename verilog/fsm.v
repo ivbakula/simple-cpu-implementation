@@ -6,6 +6,7 @@ module moore_fsm (
 
     // control unit control signals
     input ld_done,
+    input io_done,
     input [2:0]func,
     input halt,
 
@@ -22,10 +23,11 @@ module moore_fsm (
     localparam STATE_IncPC =   9'b010000000;  // 7
     localparam STATE_Halt =    9'b100000000;  // 8
 
+    localparam FUNC_BLOCK_SPEC   = 3'b000;
     localparam FUNC_BLOCK_ALU = 3'b001;
     localparam FUNC_BLOCK_DATA = 3'b010;
     localparam FUNC_BLOCK_BRANCH = 3'b011;
-    localparam FUNC_BLOCK_SPEC   = 3'b000;
+    localparam FUNC_BLOCK_IO = 3'b100;
 
     reg [8:0] current_state;
     reg [8:0] next_state;
@@ -51,12 +53,13 @@ module moore_fsm (
 		         FUNC_BLOCK_ALU: next_state = STATE_Alu;
 		         FUNC_BLOCK_DATA: next_state = STATE_DataMov;
 			 FUNC_BLOCK_BRANCH: next_state = STATE_Branch;
+			 FUNC_BLOCK_IO: next_state = STATE_Io;
 	             endcase
 	    end
 
 	    STATE_Alu: next_state = STATE_IncPC;
 	    STATE_DataMov: if(ld_done) next_state = STATE_IncPC;
-	    STATE_Io: next_state = STATE_IncPC;
+	    STATE_Io: if(io_done) next_state = STATE_IncPC;
 	    STATE_Branch: next_state = STATE_IncPC;
 	    STATE_IncPC: next_state = STATE_Fetch;
 	endcase

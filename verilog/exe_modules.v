@@ -138,3 +138,25 @@ module data_mov (
 	 end
     end
 endmodule
+
+module input_output (
+    input clk,
+    input en,
+    input [31:0] xd,
+    output rdy,
+
+    input rxd_pin,
+    output txd_pin
+    );
+
+    wire enable_trans;
+    wire [23:0] ignore;
+    wire [7:0] snd;
+
+    assign {ignore, snd} = xd;
+    assign enable_trans = en;
+
+    uart_transceiver transceiver(
+	.clk(clk), .en(enable_trans), .data_send(snd), .rdy(rdy), .rxd(rxd_pin), .txd(txd_pin)
+    );
+endmodule

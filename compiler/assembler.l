@@ -50,8 +50,8 @@ NAME [._a-zA-Z]+
 "ldw"|"LDW" { yylval = 3; return OPCODE_DATA_LOAD; }
 "lw"|"LW" { yylval = 4; return OPCODE_DATA_LOAD; }
 "lb"|"LB" { yylval = 5; return OPCODE_DATA_LOAD; }
-"out"|"out" { yylval = 6; return OPCODE_DATA_STORE; }
-"in"|"IN" { yylval = 7; return OPCODE_DATA_LOAD; }
+"out"|"out" { yylval = 6; return OPCODE_IO; }
+"in"|"IN" { yylval = 7; return OPCODE_IO; }
 
 "beq"|"BEQ" { yylval = 0; return OPCODE_BRANCH_CND; }
 "bne"|"BNE" { yylval = 1; return OPCODE_BRANCH_CND; }

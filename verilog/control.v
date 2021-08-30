@@ -1,7 +1,10 @@
 module control (
     input clk,
     input rst,
-    input enable
+    input enable,
+
+    input rx_line,
+    output tx_line
     );
  
     reg low = 0;
@@ -35,6 +38,7 @@ module control (
     wire [1:0]write_which;
     wire [31:0] y_data;
     wire ld_done;
+    wire io_done;
 
     // branch module ports
     wire [31:0] offset;
@@ -93,6 +97,10 @@ module control (
 	.offset(offset),   .st_flag(st_flag)
     );
 
+    input_output io (
+	.clk(clk), .en(fsm_state[6]), .xd(xd), .rdy(io_done), .rxd_pin(rx_line), .txd_pin(tx_line)
+    );
+
     program_counter p (
 	.en(fsm_state[7]), .pc_curr(pc), .st_flag(st_flag), 
 	.pc_nxt(pc_next),  .offset(offset)
@@ -101,7 +109,7 @@ module control (
     moore_fsm fsm (
 	.rst(rst),   .clk(clk),   .en(enable),
 	.func(func), .halt(halt), .state(fsm_state),
-	.ld_done(ld_done)
+	.ld_done(ld_done), .io_done(io_done)
     );
 
     regfile r (
@@ -120,4 +128,22 @@ module control (
 	.clk(clk),        .i_addr(pc),   .i_write(low),
 	.i_data(nothing), .o_data(instr)
     );
+
+    always @ ( * ) 
+    begin
+	if (rst) begin
+	      data_cache.memory_bank[0] = 8'd72;
+	      data_cache.memory_bank[1] = 8'd101;
+	      data_cache.memory_bank[2] = 8'd108;
+	      data_cache.memory_bank[3] = 8'd108;
+	      data_cache.memory_bank[4] = 8'd111;
+	      data_cache.memory_bank[5] = 8'd32;
+	      data_cache.memory_bank[6] = 8'd87;
+	      data_cache.memory_bank[7] = 8'd111;
+	      data_cache.memory_bank[8] = 8'd114;
+	      data_cache.memory_bank[9] = 8'd108;
+	      data_cache.memory_bank[10] = 8'd100;
+	      data_cache.memory_bank[11] = 8'd33;
+	end
+    end
 endmodule
