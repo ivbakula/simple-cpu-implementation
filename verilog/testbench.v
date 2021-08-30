@@ -64,9 +64,8 @@ module testbench;
 	$strobe("mem @ 8:", data_2);
 	$strobe("gpr0: ", ctrl.r.regs[5]);
 	$strobe("gpr1: ", ctrl.r.regs[6]);
-
-	@ (negedge ctrl.io.transceiver.tx_busy);
 	$finish;
+
     end
 
     always @ (posedge clk)
@@ -80,8 +79,11 @@ module testbench;
 	$dumpvars(1, ctrl.fsm_state);
 	$dumpvars(1, ctrl.io_done);
 	$dumpvars(1, ctrl.ld_done);
+	$dumpvars(1, ctrl.io.transceiver.rdy);
 	$dumpvars(1, ctrl.tx_line);
 	$dumpvars(1, ctrl.rx_line);
 	$dumpvars(1, ctrl.io.transceiver.tx_busy);
+	$dumpvars(1, ctrl.io.transceiver.state);
+
     end
 endmodule

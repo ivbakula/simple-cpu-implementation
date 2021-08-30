@@ -205,30 +205,25 @@ module uart_transceiver (
 
    always @ ( posedge clk )
    begin
-
        case (state)
 	   STATE_IDLE: begin
+	       rdy <= 0;
 	       counter <= 0;
 	       send_buffer <= 0;
 	       if (en) begin
-		   rdy <= 0;
 		   state <= STATE_START;
-		   send_buffer <= data_send;
 	       end else begin
-	           rdy <= 1;
 		   state <= STATE_IDLE;
 	       end
 	   end // STATE_IDLE
 
            STATE_START: begin
-	       rdy <= 0;
 	       send_buffer <= data_send; 
 	       tx_start <= 1;
 	       if (counter < 1) begin
 		   counter <= counter + 1;
 		   state <= STATE_START;
 	       end else begin
-		   rdy <= 1;
 		   counter <= 0;
 		   state <= STATE_DONE;
 	       end
@@ -236,8 +231,12 @@ module uart_transceiver (
 
 	   STATE_DONE: begin
 	       tx_start <= 0;
-	       if (!tx_busy) state <= STATE_IDLE;
-	       else state <= STATE_DONE;
+	       if (!tx_busy) begin
+		   rdy <= 1;
+		   if (counter < 1) counter <= counter + 1;
+		   else state <= STATE_IDLE;
+	       end else 
+		   state <= STATE_DONE;
 	   end // STATE_DONE
        endcase
    end
