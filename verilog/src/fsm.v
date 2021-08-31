@@ -2,7 +2,7 @@ module moore_fsm (
     // "outside world" control signals
     input rst,	// reset
     input clk,  // clock
-    input en,   // enable
+//    input en,   // enable
 
     // control unit control signals
     input ld_done,
@@ -36,14 +36,15 @@ module moore_fsm (
 
     always @ ( posedge clk )
     begin
-	if (rst) next_state <= STATE_Initial;
+	if (rst) current_state <= STATE_Initial;
 	else  current_state <= next_state;
     end
 
     always @ ( * )
     begin
+	if (rst) next_state = STATE_Initial;
 	case (current_state)
-	    STATE_Initial: if (en) next_state = STATE_Fetch;
+	    STATE_Initial: next_state = STATE_Fetch;
 
 	    STATE_Fetch: next_state = STATE_Decode;
 

@@ -19,7 +19,7 @@ NEG -
 DEC [0-9]+[0-9]*
 HEX 0x[0-9A-Fa-f]+
 BIN 0b[0-1]+
-NAME [._a-zA-Z]+
+NAME [._a-zA-Z]+[0-9]*
 %%
 [\t ] ;
 \n { yyline++; }

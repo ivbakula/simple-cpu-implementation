@@ -1,4 +1,4 @@
-module bram #(parameter ADDR_WIDTH = 32, DATA_WIDTH = 8, DEPTH = 2250) (
+module bram #(parameter ADDR_WIDTH = 32, DATA_WIDTH = 8, DEPTH = 2250, TYPE = 0) (
     input wire clk,
     input wire [ADDR_WIDTH-1:0] i_addr,
     input wire i_write,
@@ -7,6 +7,14 @@ module bram #(parameter ADDR_WIDTH = 32, DATA_WIDTH = 8, DEPTH = 2250) (
     );
 
     reg [DATA_WIDTH-1:0] memory_bank[0:DEPTH-1];
+
+    initial begin
+	if (TYPE == 1)
+	    $readmemh("firmware_text.hex", memory_bank);
+	else if (TYPE == 2)
+	    $readmemh("firmware_data.hex", memory_bank);
+    end
+
     always @ ( negedge clk )
     begin
 	if (i_write) begin
@@ -38,18 +46,17 @@ module regfile (
 
     always @ ( negedge clk )
     begin
-	if (we) begin
+	if (rst) begin
+	    for (i = 0; i < 16; i = i + 1) 
+		regs[i] = 0;
+	end else if (we) begin
 	    if (id) regs[id] <= y;
 	end
     end
 
     always @ ( * )
     begin
-	if (rst) begin
-	    for (i = 0; i < 16; i = i + 1) begin
-		regs[i] = 0;
-	    end
-       end else begin 
+       if(!rst) begin 
 	    x1 = regs[i1]; 
 	    x2 = regs[i2]; 
 	    xd = regs[id]; 

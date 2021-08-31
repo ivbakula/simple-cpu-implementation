@@ -1,12 +1,20 @@
 module control (
-    input clk,
-    input rst,
-    input enable,
+    input clk_50,
+    input rst_board,
+//    input enable,
 
     input rx_line,
     output tx_line
     );
  
+    // load firmware helpers
+    integer fp;
+    integer size;
+    integer i;
+    integer j;
+    reg [7:0]r8;
+    reg [31:0]r32[11:0];
+
     reg low = 0;
     reg high = 1;
     reg [31:0] nothing = 32'bz;
@@ -82,7 +90,7 @@ module control (
 	.en(fsm_state[4]), .opcode(opcode), .xs(x1),
 	.xd(xd),           .imm(imm),       .i_addr(i_addr),
 	.o_data(o_data),   .i_data(i_data), .write_which(write_which),
-	.y(y_data),        .clk(clk),       .done(ld_done)
+	.y(y_data),        .clk(clk_50),       .done(ld_done)
     );
 
     alu a (
@@ -98,7 +106,7 @@ module control (
     );
 
     input_output io (
-	.clk(clk), .en(fsm_state[6]), .xd(xd), .rdy(io_done), .rxd_pin(rx_line), .txd_pin(tx_line)
+	.clk(clk_50), .en(fsm_state[6]), .xd(xd), .rdy(io_done), .rxd_pin(rx_line), .txd_pin(tx_line)
     );
 
     program_counter p (
@@ -107,43 +115,25 @@ module control (
     );
 
     moore_fsm fsm (
-	.rst(rst),   .clk(clk),   .en(enable),
+	.rst(rst_board),   .clk(clk_50),   
 	.func(func), .halt(halt), .state(fsm_state),
 	.ld_done(ld_done), .io_done(io_done)
     );
 
     regfile r (
-	.we(wen_regs), .clk(clk), .rst(rst), 
+	.we(wen_regs), .clk(clk_50), .rst(rst_board), 
         .i1(i1),       .i2(i2),   .id(id), 
         .y(y),         .x1(x1),   .x2(x2),
         .xd(xd),       .pc(pc)
     );
 
-    bram data_cache (
-	.clk(clk),       .i_addr(i_addr), .i_write(i_write),
+    bram #( .TYPE(2)) data_cache (
+	.clk(clk_50),    /*.rst(rst_board),*/   .i_addr(i_addr), .i_write(i_write),
 	.i_data(o_data), .o_data(i_data)
     );
 
-    bram instr_cache (
-	.clk(clk),        .i_addr(pc),   .i_write(low),
+    bram #( .TYPE(1)) instr_cache (
+	.clk(clk_50),     /* .rst(rst_board),*/   .i_addr(pc),   .i_write(low),
 	.i_data(nothing), .o_data(instr)
     );
-
-    always @ ( * ) 
-    begin
-	if (rst) begin
-	      data_cache.memory_bank[0] = 8'd72;
-	      data_cache.memory_bank[1] = 8'd101;
-	      data_cache.memory_bank[2] = 8'd108;
-	      data_cache.memory_bank[3] = 8'd108;
-	      data_cache.memory_bank[4] = 8'd111;
-	      data_cache.memory_bank[5] = 8'd32;
-	      data_cache.memory_bank[6] = 8'd87;
-	      data_cache.memory_bank[7] = 8'd111;
-	      data_cache.memory_bank[8] = 8'd114;
-	      data_cache.memory_bank[9] = 8'd108;
-	      data_cache.memory_bank[10] = 8'd100;
-	      data_cache.memory_bank[11] = 8'd33;
-	end
-    end
 endmodule

@@ -65,7 +65,6 @@ module branch (
 	if (reset) st_flag = 0;
 	if (en) begin
 	    offset = xd + diff;
-	    $strobe("offset = xd + imm = %d + %d = %d", xd, imm, offset);
 	    case (opcode)
 		OPCODE_BGT: if (x1 > x2) st_flag = 1;
 		OPCODE_BNE: if (x1 != x2) st_flag = 1;

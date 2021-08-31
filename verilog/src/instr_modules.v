@@ -33,7 +33,7 @@ module decoder (
     localparam Type_C = 2'b10;
     always @ ( * )
     begin
-	if (en) begin
+//	if (en) begin
 	    func = instr[31:29];
 	    type = instr[28:27];
 	    opcode = instr[26:24];
@@ -52,13 +52,13 @@ module decoder (
 		    if (instr[10]) imm = {10'b1111111111, instr[10:0]};
 		    else imm = {10'b0000000000, instr[10:0]};
 	        end
-		Type_C: imm = instr[20:0];
+		default: imm = instr[20:0]; // TYPE_C
 	    endcase
 
 	    if (func == 3'b0) begin
 		if (opcode == 3'b111) halt = 1;
 	    end else
 		halt = 0;
-	end
+//	end
     end
 endmodule

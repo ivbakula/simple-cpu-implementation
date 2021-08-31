@@ -1,0 +1,4 @@
+NET "clk_50" LOC = A10 | IOSTANDARD = LVTTL;
+NET "tx_line" LOC = A14 | IOSTANDARD = LVTTL;
+NET "rx_line" LOC = C13 | IOSTANDARD = LVTTL;
+NET "rst_board" LOC = T8 | IOSTANDARD = LVTTL;
